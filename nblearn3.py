@@ -22,15 +22,22 @@ nbProbs = defaultdict(lambda: defaultdict(float))
 stopwords = []
 
 #total count of words
-totalWords = 0
+tagCount = defaultdict(int)
+
+#priorProbabilityCounter
+priorpCounter = defaultdict(int)
+
+#priorProbability
+priorProbability = defaultdict(float)
 
 #driver function
 def main():
-    filename = sys.argv[1]    
+    filename = sys.argv[1]
     listOfStrings = readFile(filename)
     caluclateCount(listOfStrings)
     handleStopWords()
     doSmoothing()
+    calculatePriorProbabilities()
     calculateProbabilities()
     writeToFile()
 
@@ -50,13 +57,17 @@ def caluclateCount(strings):
     for line in strings:
        tokenizedWords = tokenize(line)
        trueFake = tokenizedWords[1]
+       priorpCounter[trueFake] +=1
        posNeg = tokenizedWords[2]
+       priorpCounter[posNeg] +=1
        for word in tokenizedWords[3:]:
            countMap[word][trueFake] += 1
            countMap[word][posNeg] +=1
            countMap[word][COUNT] +=1
-           totalWords +=1 
-    pprint(countMap)
+           tagCount[trueFake] += 1
+           tagCount[posNeg] +=1
+           tagCount[COUNT] +=1            
+    #pprint(countMap)
 
 #implement several tokenize methods like lower casing, remove punctuation etc
 def tokenize(line):
@@ -70,17 +81,49 @@ def handleStopWords():
 
 #smoothing function
 def doSmoothing():
-    return []
+    #print('-------------------------------------------------------------------------------------------------------------------------------')
+    for k in countMap.keys():
+        countMap[k][TRUE]+=1
+        countMap[k][FAKE]+=1
+        countMap[k][POSITIVE]+=1
+        countMap[k][NEGATIVE]+=1    
+    #pprint(countMap)
+
+#calculatePriorProbabilities
+def calculatePriorProbabilities():
+    pprint(priorpCounter)
+    priorProbability[TRUE] = math.log10(priorpCounter[TRUE]/(priorpCounter[TRUE]+priorpCounter[FAKE]))
+    priorProbability[FAKE] = math.log10(priorpCounter[FAKE]/(priorpCounter[TRUE]+priorpCounter[FAKE]))
+    priorProbability[POSITIVE] = math.log10(priorpCounter[POSITIVE]/(priorpCounter[POSITIVE]+priorpCounter[NEGATIVE]))
+    priorProbability[NEGATIVE] = math.log10(priorpCounter[NEGATIVE]/(priorpCounter[POSITIVE]+priorpCounter[NEGATIVE]))
+
+
 
 #calculate the probabalities. Store it in hash map with exact format as count
 #without the count
 def calculateProbabilities():
-    return []
+    uniqueWords = len(countMap.keys())
+    smoothedTrueWords = tagCount[TRUE]+uniqueWords
+    smoothedFakeWords = tagCount[FAKE]+uniqueWords
+    smoothedPosWords = tagCount[POSITIVE]+uniqueWords
+    smoothedNegWords = tagCount[NEGATIVE]+uniqueWords    
+    for k in countMap.keys():
+        nbProbs[k][TRUE] = math.log10(countMap[k][TRUE]/smoothedTrueWords)
+        nbProbs[k][FAKE] = math.log10(countMap[k][FAKE]/smoothedFakeWords)
+        nbProbs[k][POSITIVE] = math.log10(countMap[k][POSITIVE]/smoothedPosWords)
+        nbProbs[k][NEGATIVE] = math.log10(countMap[k][NEGATIVE]/smoothedNegWords)        
+    #pprint(nbProbs)
 
 #write to file called nbmodel.txt
 def writeToFile():
-    return []    
-
+    data = {}
+    data['Probabilities'] = nbProbs
+    data['StopWords'] = stopwords
+    data['Prior'] = priorProbability
+    pprint(data)
+    x = json.dumps(data,ensure_ascii=False)
+    with open('nbmodel.txt','w',encoding='utf-8') as file:
+        file.write(x)
 
 if __name__ == '__main__':
     main()
