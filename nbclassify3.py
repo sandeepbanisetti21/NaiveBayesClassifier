@@ -44,6 +44,7 @@ def naivebayesClassify(line):
     id = words[0]
 
     for word in words[1:]:
+        word = word.lower()
         if(word not in stopWords):
             if(word in trainedWords):
                 trueProb = trueProb + nbProbs[word][TRUE]
@@ -65,6 +66,7 @@ def naivebayesClassify(line):
 
 #implement several tokenize methods like lower casing, remove punctuation etc
 def tokenize(line):
+    #line = line.lower()
     line = re.sub('[!.:;()\[\],]', '', line)
     words = line.strip().split(" ")
     return words
@@ -88,6 +90,15 @@ def main():
     for line in lines:
         naivebayesClassify(line)
     writeOutput()
+
+#function to run from eval
+def run(filename):
+    data = json.load(open('nbmodel.txt', encoding='utf-8'))
+    transformJsonData(data)
+    lines = readDoc(filename)
+    for line in lines:
+        naivebayesClassify(line)
+    writeOutput() 
 
 
 if __name__ == '__main__':
